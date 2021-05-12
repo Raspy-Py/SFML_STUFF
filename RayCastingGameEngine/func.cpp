@@ -1,71 +1,75 @@
 #include "func.h"
 
-class Player {
-
-public:
-    Player(double, double, double);
-    void move_player(int);
-    void rotate_player(int);
-    void get_info();
-
-private:
-    vector<double> cords;
-    double speed;
-    double dir = 0;
-    double rot_speed = 1 * PI / 180;
-};
-
 Player::Player(double x, double y, double spd) {
-    cords.push_back(x);
-    cords.push_back(y);
+    cords.x = x;
+    cords.y = y;
     speed = spd;
+    health = 100;
 }
 
 void Player::move_player(int way) {
     // way = -1 (backward)
     // way =  1 (forward)
-    cords[0] += speed * way * cos(dir);
-    cords[1] += speed * way * sin(dir);
-
-    get_info();
+    cords.x += speed * way * cos(dir);
+    cords.y += speed * way * sin(dir);
 }
 
 void Player::rotate_player(int side)
 {
     // side = -1 (turn left)
     // side =  1 (turn right)
-    dir += side * rot_speed;
+    dir += side * rotationSpeed;
     if (dir > PI * 2)
     {
-        dir = 0.001;
+        dir -= 2 * PI;
     }
     else if (dir < 0)
     {
-        dir = 2 * PI - 0.001;
+        dir += 2 * PI;
     }
-
-    get_info();
 }
 
 void Player::get_info()
 {
-    cout << "X:\t" << cords[0] << endl;
-    cout << "Y:\t" << cords[1] << endl;
+    cout << "X:\t" << cords.x << endl;
+    cout << "Y:\t" << cords.y << endl;
     cout << "Dir\t" << dir << endl;
     cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
 }
 
+
+// Базові функції 
+
 void start_game() {
  
+    
     // Завантажуємо схему рівня
     int** level = load_map_plan();
-    Player player(50.0, 50.0, 0.1);
+
+    print_matrix(level, 16);
+    // Створюємо гравця
+    Player player(500.0, 500.0, 0.1);
+
+    // Масив довжин променів
+    int* rays = new int[WIN_WIDTH];
+
+    // test
+    VertexArray line(Lines, 2);
+    line[0].color = Color(255,0,0);
+    line[1].color = Color(255, 0, 0);
+    line[0].position = Vector2f(0,0);
+    line[1].position = Vector2f(0, 200);
+
+
+    // Масив вершин зображення
+    VertexArray projection(Lines, WIN_WIDTH * 2);
 
     ContextSettings settings;
     settings.antialiasingLevel = 8;
 
     // Створюємо вікно
     RenderWindow window(VideoMode(WIN_WIDTH, WIN_HEIGHT), "RayCastingGameEngine", Style::Default, settings);
+    window.setFramerateLimit(60);
 
     // Головний цикл програми
     while (window.isOpen())
@@ -78,28 +82,20 @@ void start_game() {
                 window.close();
         }
 
-        if (Keyboard::isKeyPressed(Keyboard::W))
-        {
-            player.move_player(1);
-        }
-        else if (Keyboard::isKeyPressed(Keyboard::S))
-        {
-            player.move_player(-1);
-        }
-        if (Keyboard::isKeyPressed(Keyboard::A))
-        {
-            player.rotate_player(-1);
-        }
-        else if (Keyboard::isKeyPressed(Keyboard::D))
-        {
-            player.rotate_player(1);
-        }
+        if      (Keyboard::isKeyPressed(Keyboard::W)) player.move_player(1);        
+        else if (Keyboard::isKeyPressed(Keyboard::S)) player.move_player(-1);
+        
+        if      (Keyboard::isKeyPressed(Keyboard::A)) player.rotate_player(-1);       
+        else if (Keyboard::isKeyPressed(Keyboard::D)) player.rotate_player(1);      
+
+        if (Keyboard::isKeyPressed(Keyboard::P)) player.get_info();
 
         // Оновлюємо зображення
         window.clear();
+        window.draw(projection);
+        window.draw(line);
         window.display();
     }
-
 }
 
 int** load_map_plan()
@@ -143,6 +139,20 @@ int** load_map_plan()
     return level;
 }
 
+
+void  horizontal_intersections(Player p, int** map, int* hor_width)
+{
+    double a = p.dir - FOV / 2;
+
+    for (int i = 0; i < WIN_WIDTH; i++)
+    {
+        if (a <= PI)
+        {
+
+        }
+    }
+}
+
 template <typename T>
 void print_matrix(T** arr, int n) {
     for (int i = 0; i < n; i++)
@@ -155,3 +165,12 @@ void print_matrix(T** arr, int n) {
     }
 }
 
+template<typename T>
+void print_vector(T* vct, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        cout << vct[i] << "\t";
+    }
+    cout << endl;
+}
