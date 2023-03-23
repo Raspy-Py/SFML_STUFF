@@ -1,70 +1,87 @@
 ﻿#include <SFML/Graphics.hpp>
-#include <time.h>
-#include <iostream>
+#define NOMINMAX
+#include <Windows.h>
+#include <random>
+#include <math.h>
 
-using namespace sf;
 
-double lerp(double A, double B, double t) {
-    t = 3 * pow(t, 2) - 2 * pow(t, 3);
-    return A * (1 - t) + B * t;
+const float PARTICLE_MASS = 300000000;
+const float PMS = PARTICLE_MASS * PARTICLE_MASS;
+const float G = 6.67384e-11;
+const int WIN_SIZE = 800;
+
+const int POINTS_NUMBER = 2000;
+
+// create the particle system
+sf::VertexArray points(sf::Points, POINTS_NUMBER);
+std::vector<sf::Vector2f> vel(POINTS_NUMBER);
+
+inline float lenth(const sf::Vector2f& v1)
+{
+    return sqrt( (v1.x* v1.x) + (v1.y * v1.y) );
 }
 
-int main()
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-    srand(1373);
-
-    ContextSettings settings;
+    sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
+    sf::RenderWindow window(sf::VideoMode(WIN_SIZE, WIN_SIZE), "Particles", sf::Style::Close, settings);
 
-    // create the window
-    RenderWindow window(VideoMode(800, 200), "Particles", Style::Default, settings);
+    std::normal_distribution<> ndstr((float)WIN_SIZE/2.0, 50.0);
+    std::uniform_real_distribution<> dstr(0.0, (float)WIN_SIZE);
+    std::default_random_engine eng(time(NULL));
 
-    // create the particle system
-    VertexArray points(LinesStrip, 800);
-
-    double A, B, t;
-    double net[100];
-    net[0] = 0;
-    for (int i = 1; i < 100; i++)
+    for (size_t i = 0; i < points.getVertexCount(); ++i)
     {
-        net[i] = ((double)(rand() % 2001) - 1000) / 1000;
+        auto& point = points[i];
+
+        point.position = { (float)ndstr(eng), (float)ndstr(eng) };
+        vel[i] = { 0.0, 0.0 };
     }
-    
-    double s = 0, step = 0.1;
-    int j;
-    
-    // run the main loop
+
+    sf::Clock time;
+
     while (window.isOpen())
     {
-        // handle events
-        Event event;
+
+        float dt = time.getElapsedTime().asSeconds() * 10;
+        time.restart();
+        sf::Event event;
         while (window.pollEvent(event))
         {
-            if (event.type == Event::Closed)
+            if (event.type == sf::Event::Closed)
                 window.close();
+        }       
+
+        for (int i = 0; i < vel.size(); i++)
+        {
+            sf::Vector2f f{};
+            for (int j = 0; j < vel.size(); j++)
+            {
+                if (i == j) continue;
+
+                sf::Vector2f pathVec = points[j].position - points[i].position;
+
+                float dist = lenth(points[j].position - points[i].position) + 1;
+                float dist_c = dist * dist * dist;
+
+                //if (dist < 1.5) continue;
+
+                pathVec.x /= dist_c;
+                pathVec.y /= dist_c;
+
+                f += pathVec;
+            }
+
+            f.x *= G * PARTICLE_MASS;
+            f.y *= G * PARTICLE_MASS;
+            
+            vel[i] += f;
+
+            points[i].position += {vel[i].x * dt, vel[i].y * dt};
         }
 
-        
-        for (int i = 0; i < 800; i+=2)
-        {
-            j = i + s;
-            A = net[j / 80] * (((double)j / 80) - j / 80);
-            B = net[j / 80 + 1] * (((double)j / 80) - j / 80 - 1);
-            t = ((double)(j % 80) / 80);
-       
-            points[i].position = Vector2f(i, 125 + 150 * lerp(A, B, t));
-            points[i].color = Color(255, 255, 255, 255 * (pow((double)i / 800, 1.5)));
-            points[i + 1].position = Vector2f(400, 0);
-            points[i + 1].color = Color(255, 255, 255, 255 * (pow((double)i / 800, 1.5)));
-        }
-        s += step;
-        if (s >= 7200 || s <= 0)
-        {
-            step *= -1;
-        }
-
-        // draw it
-        window.clear();
+        window.clear(sf::Color(0, 0, 30, 255));
         window.draw(points);
         window.display();
     }
